@@ -33,6 +33,8 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            // Force skiko native runtime to match the API version
+            implementation("org.jetbrains.skiko:skiko-awt-runtime-macos-arm64:0.9.37.4")
         }
     }
 }
@@ -41,7 +43,7 @@ kotlin {
 compose.desktop {
     application {
         mainClass = "io.github.l2hyunwoo.raytracer.MainKt"
-
+        jvmArgs("-Dskiko.renderApi=OPENGL")
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "io.github.l2hyunwoo.raytracer"
