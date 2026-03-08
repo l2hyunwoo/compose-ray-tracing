@@ -25,6 +25,7 @@ kotlin {
             implementation(libs.jetbrains.material3.adaptiveNavigation3)
             implementation(libs.jetbrains.lifecycle.viewmodelNavigation3)
             implementation(libs.compose.icons)
+            implementation("io.github.dautovicharis:charts:2.2.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
