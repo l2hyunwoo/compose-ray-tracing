@@ -56,6 +56,9 @@ fun ImageProcessingScreen(
         val lena = imageResource(
             Res.drawable.lena
         )
+        val originalPixels = remember(lena) {
+            lena.toPixelMap().buffer.copyOf()
+        }
         var bitmap by remember {
             mutableStateOf(lena)
         }
@@ -65,16 +68,14 @@ fun ImageProcessingScreen(
         var histogramData by remember {
             mutableStateOf<List<Pair<String, List<Int>>>>(emptyList())
         }
-        val style =
-            LineChartDefaults.style(
-                lineAlpha = 0.7619f,
-                lineColors = listOf(Color.Red, Color.Green, Color.Blue),
-            )
+        val style = LineChartDefaults.style(
+            lineAlpha = 0.7619f,
+            lineColors = listOf(Color.Red, Color.Green, Color.Blue),
+        )
 
         LaunchedEffect(brightness) {
-            val pixelMap = bitmap.toPixelMap()
-            pixelMap
-                .buffer
+            val pixelMap = lena.toPixelMap()
+            originalPixels
                 .map { Argb.from(it) * brightness }
                 .forEachIndexed { index, argb -> pixelMap.buffer[index] = argb.toInt() }
             bitmap = pixelMap.toImageBitmap()
