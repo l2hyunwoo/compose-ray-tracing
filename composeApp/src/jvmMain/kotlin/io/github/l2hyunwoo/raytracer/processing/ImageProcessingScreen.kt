@@ -34,10 +34,12 @@ import io.github.dautovicharis.charts.LineChart
 import io.github.dautovicharis.charts.model.toMultiChartDataSet
 import io.github.dautovicharis.charts.style.LineChartDefaults
 import io.github.l2hyunwoo.raytracer.model.Argb
+import io.github.l2hyunwoo.raytracer.model.Hsv
 import io.github.l2hyunwoo.raytracer.model.toImageBitmap
 import org.jetbrains.compose.resources.imageResource
 import raytracer.composeapp.generated.resources.Res
 import raytracer.composeapp.generated.resources.lena
+import kotlin.math.round
 
 /**
  * 영상 반전
@@ -68,30 +70,43 @@ fun ImageProcessingScreen(
         var histogramData by remember {
             mutableStateOf<List<Pair<String, List<Int>>>>(emptyList())
         }
+        var useHistogramEqualization by remember {
+            mutableStateOf(false)
+        }
         val style = LineChartDefaults.style(
             lineAlpha = 0.7619f,
             lineColors = listOf(Color.Red, Color.Green, Color.Blue),
         )
 
-        LaunchedEffect(brightness) {
+        LaunchedEffect(brightness, useHistogramEqualization) {
+            val brightPixels = originalPixels.map { Argb.from(it) * brightness }
+
+            val displayPixels = if (useHistogramEqualization) {
+                val hsvPixels = brightPixels.map { Hsv.from(it) }
+                val histogram = hsvPixels.groupingBy { it.vInt }.eachCount()
+                val totalPixels = hsvPixels.size
+                val lookupTable = (0..255)
+                    .map { histogram.getOrDefault(it, 0) }
+                    .runningReduce { acc, count -> acc + count }
+                    .map { cdf -> round((cdf.toDouble() / totalPixels) * 255).toInt() }
+                hsvPixels.map { it.withVInt(lookupTable[it.vInt]).toRgb() }
+            } else {
+                brightPixels
+            }
+
             val pixelMap = lena.toPixelMap()
-            originalPixels
-                .map { Argb.from(it) * brightness }
-                .forEachIndexed { index, argb -> pixelMap.buffer[index] = argb.toInt() }
+            displayPixels.forEachIndexed { index, argb ->
+                pixelMap.buffer[index] = argb.toInt()
+            }
             bitmap = pixelMap.toImageBitmap()
-        }
-        LaunchedEffect(bitmap) {
-            val pixels = bitmap.toPixelMap()
-                .buffer
-                .map { Argb.from(it) }
 
             fun countToList(counts: Map<Int, Int>): List<Int> {
                 return List(256) { counts.getOrDefault(it, 0) }
             }
             histogramData = listOf(
-                "R" to countToList(pixels.groupingBy { it.r }.eachCount()),
-                "G" to countToList(pixels.groupingBy { it.g }.eachCount()),
-                "B" to countToList(pixels.groupingBy { it.b }.eachCount()),
+                "R" to countToList(displayPixels.groupingBy { it.r }.eachCount()),
+                "G" to countToList(displayPixels.groupingBy { it.g }.eachCount()),
+                "B" to countToList(displayPixels.groupingBy { it.b }.eachCount()),
             )
         }
         Image(
@@ -128,9 +143,16 @@ fun ImageProcessingScreen(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text("Equalization")
-                // Checkbox()
+                Checkbox(
+                    useHistogramEqualization,
+                    { useHistogramEqualization = it }
+                )
             }
         }
     }
